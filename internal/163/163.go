@@ -1,17 +1,17 @@
-package main
+package netease
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/XiaoMengXinX/Music163Api-Go/api"
+	"github.com/XiaoMengXinX/Music163Api-Go/types"
 	"github.com/XiaoMengXinX/Music163Api-Go/utils"
 )
 
-func main() {
+func Search_Song(keyword string) (result types.SearchSongData, err error) {
 	data := utils.RequestData{}
 	Search_Config := api.SearchSongConfig{
-		Keyword: "114514",
+		Keyword: keyword,
 		Limit:   5,
 	}
 
@@ -20,12 +20,17 @@ func main() {
 		fmt.Println("Error:", err)
 		return
 	}
-	for _, song := range Search_Result.Result.Songs {
-		var artists_list []string
-		for _, artist := range song.Artists {
-			artists_list = append(artists_list, artist.Name)
-		}
-		artists := strings.Join(artists_list, ", ")
-		fmt.Printf("歌曲名称: %s 鸽手: %s 歌曲 ID: %d\n", song.Name, artists, song.Id)
+
+	return Search_Result, nil
+}
+
+func Get_Download_URL(song_id int) (result types.SongDownloadURLData, err error) {
+	data := utils.RequestData{}
+
+	download_URL, err := api.GetSongDownloadURL(data, song_id)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
 	}
+	return download_URL, nil
 }
