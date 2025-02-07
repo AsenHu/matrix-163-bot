@@ -1,23 +1,36 @@
 package main
 
 import (
-	"fmt"
-	"matrix-163-bot/internal/netease"
+	"encoding/json"
+	"io"
+	"log"
+	"os"
 )
 
+type Account struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	BaseURL  string `json:"baseURL"`
+	DeviceID string `json:"deviceID"`
+	Token    string `json:"token"`
+}
+
 func main() {
-	// 搜索歌曲
-	search_result, err := netease.Search_Song("warma")
+	// 检查本地是否有账户状态
+	// 创建文件
+	file, err := os.Open("config.json")
 	if err != nil {
-		fmt.Println("Error:", err)
-		return
+		log.Fatal(err)
 	}
-	fmt.Println(search_result.Result.Songs[0].Id)
-	// 下载歌曲
-	full_path, err := netease.Download_Song(search_result.Result.Songs[0].Id, "cache")
+	defer file.Close()
+	// 读取文件
+	buffer, err := io.ReadAll(file)
 	if err != nil {
-		fmt.Println("Error:", err)
-		return
+		log.Fatal(err)
 	}
-	fmt.Println("Downloaded:", full_path)
+	// 解析文件
+	var account Account
+	if err := json.Unmarshal(buffer, &account); err != nil {
+		log.Fatal(err)
+	}
 }
