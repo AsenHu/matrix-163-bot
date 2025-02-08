@@ -50,16 +50,18 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 	resp, err := client.Login(ctx, &mautrix.ReqLogin{
-		Type:                     "m.login.password",
-		Password:                 account.Password,
-		Token:                    account.Token,
-		DeviceID:                 id.DeviceID(account.DeviceID),
-		InitialDeviceDisplayName: "163 Music Bot",
-		RefreshToken:             true,
+		Type: "m.login.password",
 		Identifier: mautrix.UserIdentifier{
 			Type: "m.id.user",
 			User: account.Username,
 		},
+		Password:                 account.Password,
+		Token:                    account.Token,
+		DeviceID:                 id.DeviceID(account.DeviceID),
+		InitialDeviceDisplayName: "163 Music Bot",
+
+		StoreCredentials:   true,
+		StoreHomeserverURL: true,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -86,7 +88,14 @@ func main() {
 	// 设置回调函数
 	syncer := mautrix.NewDefaultSyncer()
 	syncer.OnEventType(event.EventMessage, func(ctx context.Context, ev *event.Event) {
-		log.Printf("Message: %s", ev.Content.AsMessage().Body)
+		go func() {
+			switch {
+			case <-ctx.Done():
+				return
+			default:
+			}
+			log.Printf("Message: %s", ev.Content.AsMessage().Body)
+		}()
 	})
 	client.Syncer = syncer
 
