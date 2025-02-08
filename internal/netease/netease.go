@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/XiaoMengXinX/Music163Api-Go/api"
 	"github.com/XiaoMengXinX/Music163Api-Go/utils"
@@ -12,9 +13,14 @@ import (
 )
 
 type Song struct {
-	ID       int
-	Name     string
-	Artist   []string
+	ID     int
+	Name   string
+	Artist []string
+	Info   struct {
+		Duration int
+		MimeType string
+		Size     int
+	}
 	MusicMxc id.ContentURI
 }
 
@@ -39,6 +45,7 @@ func GetSongInfoByName(name string) (song Song, err error) {
 		Name:   searchResult.Result.Songs[0].Name,
 		Artist: artists,
 	}
+	song.Info.Duration = searchResult.Result.Songs[0].Duration
 	return
 }
 
@@ -59,6 +66,7 @@ func GetSongInfoById(id int) (song Song, err error) {
 		Name:   songInfo.Songs[0].Name,
 		Artist: artists,
 	}
+	song.Info.Duration = songInfo.Songs[0].Dt
 	return
 }
 
@@ -98,6 +106,14 @@ func GenSongMxc(client *mautrix.Client, song *Song) (err error) {
 	if err != nil {
 		return
 	}
+
+	// 设置 mime type 和大小
+	song.Info.MimeType = resp.Header.Get("Content-Type")
+	size, err := strconv.Atoi(resp.Header.Get("Content-Length"))
+	if err != nil {
+		return err
+	}
+	song.Info.Size = size
 
 	// 生成 mxc
 	song.MusicMxc = media.ContentURI

@@ -26,29 +26,29 @@ func NewConfig(path string) Config {
 	}
 }
 
-func (c Config) Load() (err error) {
+func (c *Config) Load() (err error) {
 	// 读取文件
 	buffer, err := os.ReadFile(c.Path)
-	if err != nil {
+	if (err != nil) {
 		return
 	}
 	// 解析文件
 	err = json.Unmarshal(buffer, &c.Content)
-	if err != nil {
+	if (err != nil) {
 		return
 	}
 	return
 }
 
-func (c Config) Save() (err error) {
+func (c *Config) Save() (err error) {
 	// 序列化文件
 	buffer, err := json.MarshalIndent(c.Content, "", "  ")
-	if err != nil {
+	if (err != nil) {
 		return
 	}
 	// 写入文件
 	err = os.WriteFile(c.Path, buffer, 0600)
-	if err != nil {
+	if (err != nil) {
 		return
 	}
 	return

@@ -5,11 +5,25 @@ import (
 	"matrix-163-bot/internal/config"
 	"time"
 
+	"matrix-163-bot/internal/worker"
+
 	"github.com/rs/zerolog/log"
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/id"
 )
+
+type sendMusiContent struct {
+	Body     string `json:"body"`
+	Filename string `json:"filename"`
+	Info     struct {
+		Duration int    `json:"duration"`
+		MimeType string `json:"mimetype"`
+		Size     int    `json:"size"`
+	} `json:"info"`
+	MsgType string `json:"msgtype"`
+	URL     string `json:"url"`
+}
 
 func Login(cfg *config.Account) (client *mautrix.Client, err error) {
 	// 准备登陆
@@ -45,51 +59,25 @@ func Login(cfg *config.Account) (client *mautrix.Client, err error) {
 	return
 }
 
-func SetSyncer(client *mautrix.Client) {
+func SetSyncer(client *mautrix.Client, worker *worker.Worker) {
 	syncer := mautrix.NewDefaultSyncer()
 	syncer.OnEventType(event.EventMessage, func(ctx context.Context, ev *event.Event) {
 		go func() {
-			switch {
-			case <-ctx.Done():
-				return
-			default:
+			err := worker.ProcessMessage(ctx, ev)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to process message")
 			}
-			log.Info().Str("Message", ev.Content.AsMessage().Body).Msg("Received Message")
 		}()
 	})
 	client.Syncer = syncer
 }
 
-func SendMessage(client *mautrix.Client, roomId string, message string) (err error) {
-	_, err = client.SendMessageEvent(roomId, "m.room.message", mautrix.Content{
-		MsgType: "m.text",
-		Body:    message,
-	})
-	return
+/*
+func SendMusicWithText(client *mautrix.Client, song Song) (err error) {
+	// 准备 Content
+	content := sendMusiContent{
+		Body:     song.Name - strings.Join(song.Artist, ", "),
+		Filename: song.Name + ".mp3",
+		
 }
-
-func EditMessage(client *mautrix.Client, roomId string, message string, eventId string) (err error) {
-	_, err = client.SendMessageEvent(roomId, "m.room.message", mautrix.Content{
-		MsgType: "m.text",
-		Body:    message,
-		Format:  "org.matrix.custom.html",
-		RelatesTo: &mautrix.RelatesTo{
-			RelType: "m.replace",
-			EventID: eventId,
-		},
-	})
-	return
-}
-
-func ReplyMessage(client *mautrix.Client, roomId string, message string, eventId string) (err error) {
-	_, err = client.SendMessageEvent(roomId, "m.room.message", mautrix.Content{
-		MsgType: "m.text",
-		Body:    message,
-		Format:  "org.matrix.custom.html",
-		RelatesTo: &mautrix.RelatesTo{
-			RelType: "m.in_reply_to",
-			EventID: eventId,
-		},
-	})
-	return
-}
+		*/
