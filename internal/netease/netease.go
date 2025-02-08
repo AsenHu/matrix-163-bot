@@ -1,54 +1,136 @@
 package netease
 
 import (
-	"crypto/md5"
+	"context"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/XiaoMengXinX/Music163Api-Go/api"
 	"github.com/XiaoMengXinX/Music163Api-Go/utils"
-	"github.com/rs/zerolog/log"
+	"maunium.net/go/mautrix"
+	"maunium.net/go/mautrix/id"
 )
 
-func DownloadSong(song_id int) (reader io.Reader, err error) {
-	log.Printf("Downloading song %d", song_id)
+type Song struct {
+	ID       int
+	Name     string
+	Artist   []string
+	MusicMxc id.ContentURI
+}
+
+func GetSongInfoByName(name string) (song Song, err error) {
+	// 搜索歌曲
+	searchConfig := api.SearchSongConfig{
+		Keyword: name,
+		Limit:   1,
+	}
+	searchResult, err := api.SearchSong(utils.RequestData{}, searchConfig)
+	if err != nil {
+		return
+	}
+	// 整理艺术家信息
+	artists := make([]string, len(searchResult.Result.Songs[0].Artists))
+	for i, artist := range searchResult.Result.Songs[0].Artists {
+		artists[i] = artist.Name
+	}
+	// 整理歌曲信息
+	song = Song{
+		ID:     searchResult.Result.Songs[0].Id,
+		Name:   searchResult.Result.Songs[0].Name,
+		Artist: artists,
+	}
+	return
+}
+
+func GetSongInfoById(id int) (song Song, err error) {
+	// 获取歌曲信息
+	songInfo, err := api.GetSongDetail(utils.RequestData{}, []int{id})
+	if err != nil {
+		return
+	}
+	// 整理艺术家信息
+	artists := make([]string, len(songInfo.Songs[0].Ar))
+	for i, artist := range songInfo.Songs[0].Ar {
+		artists[i] = artist.Name
+	}
+	// 整理歌曲信息
+	song = Song{
+		ID:     songInfo.Songs[0].Id,
+		Name:   songInfo.Songs[0].Name,
+		Artist: artists,
+	}
+	return
+}
+
+func GenSongMxc(client *mautrix.Client, song *Song) (err error) {
+	// 检查 song id 是否为空
+	if song.ID == 0 {
+		err = fmt.Errorf("error: song id is empty")
+		return
+	}
+
 	// 获取歌曲下载信息
-	download_info, err := api.GetSongDownloadURL(utils.RequestData{}, song_id)
+	downloadInfo, err := api.GetSongDownloadURL(utils.RequestData{}, song.ID)
 	if err != nil {
-		log.Print(err)
 		return
 	}
 
-	// 下载歌曲
-	if download_info.Data.Url == "" {
-		err = fmt.Errorf("error: download URL is empty")
-		log.Print(err)
+	// 检查歌曲下载链接是否为空
+	if downloadInfo.Data.Url == "" {
+		err = fmt.Errorf("error: download url is empty, NetEase may not have the copyright to this song")
 		return
-	}
-	log.Printf("Downloading: %s", download_info.Data.Url)
-	resp, err := http.Get(download_info.Data.Url)
-	if err != nil {
-		log.Print(err)
-		return
-	}
-	// 验证文件
-	if download_info.Data.Md5 == "" {
-		log.Warn().Msg("md5 is empty, skip verification")
-	} else {
-		hash := md5.New()
-		if _, err := io.Copy(hash, resp.Body); err != nil {
-			log.Print(err)
-			return nil, err
-		}
-		md5sum := fmt.Sprintf("%x", hash.Sum(nil))
-		if md5sum != download_info.Data.Md5 {
-			err = fmt.Errorf("error: md5 mismatch, expected %s, got %s", download_info.Data.Md5, md5sum)
-			log.Print(err)
-			return
-		}
-		log.Printf("md5 verification passed: %s", md5sum)
 	}
 
-	return resp.Body, nil
+	// 准备流式上传歌曲
+	// 准备输入流
+	resp, err := http.Get(downloadInfo.Data.Url)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	// 准备输出流
+	media, err := client.UploadMedia(context.Background(), mautrix.ReqUploadMedia{
+		Content:       resp.Body,
+		ContentLength: resp.ContentLength,
+		ContentType:   resp.Header.Get("Content-Type"),
+		FileName:      fmt.Sprintf("%s - %s.mp3", song.Name, song.Artist),
+	})
+	if err != nil {
+		return
+	}
+
+	// 生成 mxc
+	song.MusicMxc = media.ContentURI
+	return
+}
+
+func SearchSong(name string) (songs []Song) {
+	// 搜索配置
+	config := api.SearchSongConfig{
+		Keyword: name,
+		Limit:   5,
+	}
+
+	// 搜索歌曲
+	searchResult, err := api.SearchSong(utils.RequestData{}, config)
+	if err != nil {
+		return
+	}
+
+	// 整理搜索结果
+	songs = make([]Song, len(searchResult.Result.Songs))
+	for i, song := range searchResult.Result.Songs {
+		// 整理艺术家信息
+		artists := make([]string, len(song.Artists))
+		for j, artist := range song.Artists {
+			artists[j] = artist.Name
+		}
+		// 整理歌曲信息
+		songs[i] = Song{
+			ID:     song.Id,
+			Name:   song.Name,
+			Artist: artists,
+		}
+	}
+	return
 }

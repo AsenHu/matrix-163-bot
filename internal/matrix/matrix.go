@@ -93,8 +93,3 @@ func ReplyMessage(client *mautrix.Client, roomId string, message string, eventId
 	})
 	return
 }
-
-func UploadFile(client *mautrix.Client, roomId string, file string) (err error) {
-	_, err = client.Upload(roomId, file)
-	return
-}
