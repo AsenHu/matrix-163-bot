@@ -2,6 +2,62 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+
+	"github.com/XiaoMengXinX/Music163Api-Go/api"
+	"github.com/XiaoMengXinX/Music163Api-Go/utils"
+)
+
+func main() {
+	data := utils.RequestData{
+		Cookies: []*http.Cookie{
+			{
+				Name:  "MUSIC_U",
+				Value: "",
+			},
+		},
+	}
+	songCfg := api.SongURLConfig{
+		Ids: []int{2629003017},
+	}
+	result, err := api.GetSongURL(data, songCfg)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println(result.RawJson)
+}
+
+/*
+func main() {
+	data := utils.RequestData{
+		Cookies: []*http.Cookie{
+			{
+				Name:  "MUSIC_U",
+				Value: "",
+			},
+		},
+	}
+	result, err := api.GetLoginStatus(data)
+	if err != nil {
+		println(err)
+	}
+	println(result.RawJson)
+}
+
+/*
+func main() {
+	var data = utils.RequestData{}
+	result, err := api.GetQrUnikey(data)
+	if err != nil {
+		println(err)
+	}
+	println(result.Unikey)
+}
+*/
+/*
+import (
+	"fmt"
 	"strings"
 
 	"matrix-163-bot/internal/config"
@@ -32,11 +88,10 @@ func main() {
 	log.Info().Msg("Login success")
 	cfg.Print()
 
-	songName := "泛泛人类不会祈祷 人声本家"
-	song, err := netease.GetSongInfoByName(songName)
+	songId := 2601622999
+	song, err := netease.GetSongInfoById(songId)
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
 	err = netease.GenSongMxc(client, &song)
 	if err != nil {
@@ -50,3 +105,4 @@ func main() {
 	println(song.Info.Size)
 	println(song.MusicMxc.String())
 }
+*/

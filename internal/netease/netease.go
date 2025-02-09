@@ -25,12 +25,20 @@ type Song struct {
 }
 
 func GetSongInfoByName(name string) (song Song, err error) {
+	data := utils.RequestData{
+		Cookies: []*http.Cookie{
+			{
+				Name:  "MUSIC_U",
+				Value: "",
+			},
+		},
+	}
 	// 搜索歌曲
 	searchConfig := api.SearchSongConfig{
 		Keyword: name,
 		Limit:   1,
 	}
-	searchResult, err := api.SearchSong(utils.RequestData{}, searchConfig)
+	searchResult, err := api.SearchSong(data, searchConfig)
 	if err != nil {
 		return
 	}
@@ -50,8 +58,16 @@ func GetSongInfoByName(name string) (song Song, err error) {
 }
 
 func GetSongInfoById(id int) (song Song, err error) {
+	data := utils.RequestData{
+		Cookies: []*http.Cookie{
+			{
+				Name:  "MUSIC_U",
+				Value: "",
+			},
+		},
+	}
 	// 获取歌曲信息
-	songInfo, err := api.GetSongDetail(utils.RequestData{}, []int{id})
+	songInfo, err := api.GetSongDetail(data, []int{id})
 	if err != nil {
 		return
 	}
@@ -71,6 +87,14 @@ func GetSongInfoById(id int) (song Song, err error) {
 }
 
 func GenSongMxc(client *mautrix.Client, song *Song) (err error) {
+	data := utils.RequestData{
+		Cookies: []*http.Cookie{
+			{
+				Name:  "MUSIC_U",
+				Value: "",
+			},
+		},
+	}
 	// 检查 song id 是否为空
 	if song.ID == 0 {
 		err = fmt.Errorf("error: song id is empty")
@@ -78,7 +102,7 @@ func GenSongMxc(client *mautrix.Client, song *Song) (err error) {
 	}
 
 	// 获取歌曲下载信息
-	downloadInfo, err := api.GetSongDownloadURL(utils.RequestData{}, song.ID)
+	downloadInfo, err := api.GetSongDownloadURL(data, song.ID)
 	if err != nil {
 		return
 	}
@@ -121,6 +145,14 @@ func GenSongMxc(client *mautrix.Client, song *Song) (err error) {
 }
 
 func SearchSong(name string) (songs []Song) {
+	data := utils.RequestData{
+		Cookies: []*http.Cookie{
+			{
+				Name:  "MUSIC_U",
+				Value: "",
+			},
+		},
+	}
 	// 搜索配置
 	config := api.SearchSongConfig{
 		Keyword: name,
@@ -128,7 +160,7 @@ func SearchSong(name string) (songs []Song) {
 	}
 
 	// 搜索歌曲
-	searchResult, err := api.SearchSong(utils.RequestData{}, config)
+	searchResult, err := api.SearchSong(data, config)
 	if err != nil {
 		return
 	}

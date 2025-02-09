@@ -3,6 +3,7 @@ package main
 import (
 	"matrix-163-bot/internal/config"
 	"matrix-163-bot/internal/matrix"
+	"matrix-163-bot/internal/worker"
 
 	"github.com/rs/zerolog/log"
 )
@@ -37,7 +38,9 @@ func main() {
 	}
 
 	// 设置回调函数
-	matrix.SetSyncer(client)
+	var worker worker.Worker
+	worker.Client = client
+	worker.SetSyncer()
 
 	// 启动同步
 	log.Info().Msg("Start sync...")

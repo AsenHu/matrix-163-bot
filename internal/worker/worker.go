@@ -2,17 +2,20 @@ package worker
 
 import (
 	"context"
-	//"matrix-163-bot/internal/netease"
+	"matrix-163-bot/internal/matrix"
+	"matrix-163-bot/internal/netease"
+	"strconv"
 	"strings"
 
+	"github.com/rs/zerolog/log"
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/event"
+	"maunium.net/go/mautrix/id"
 )
 
 type Worker struct {
-	client *mautrix.Client
+	Client *mautrix.Client
 }
-
 
 func (w *Worker) ProcessMessage(ctx context.Context, evt *event.Event) (err error) {
 	message := evt.Content.AsMessage()
@@ -21,41 +24,41 @@ func (w *Worker) ProcessMessage(ctx context.Context, evt *event.Event) (err erro
 	}
 	strSlice := strings.Split(message.Body, " ")
 	cmd := strSlice[0]
-	//song := strings.Join(strSlice[1:], " ")
+	song := strings.Join(strSlice[1:], " ")
 
 	switch cmd {
 	case "!help":
-		//err = w.help()
+		err = w.help(evt.RoomID)
 	case "!music":
-		//err = w.music(song)
+		err = w.music(song, evt.RoomID)
 	case "!search":
-		//err = w.search(song)
+		err = w.search(evt.RoomID)
 	}
 	return
 }
 
-/*
-func (w Worker) help() (err error) {
+func (w Worker) help(roomId id.RoomID) (err error) {
 	text := "Commands:\n" +
 		"!help: Show help\n" +
 		"!music <song name or id>: Request music\n" +
 		"!search <song name>: Search music"
 
-	_, err = w.client.SendText(context.Background(), "@163-bot:matrix.org", text)
+	_, err = w.Client.SendText(context.Background(), roomId, text)
 	return
 }
 
-func (w Worker) music(input string) (err error) {
+func (w Worker) music(input string, roomId id.RoomID) (err error) {
 	// 检查 song 是否为空
 	if input == "" {
-		err = w.help()
+		err = w.help(roomId)
 		return
 	}
 
-	var song Song
+	var song netease.Song
+	var inputId int
 	// 检查 song 是否可以转换为 int, 并获取歌曲信息
-	if _, err = strconv.Atoi(input); err == nil {
-		song = netease.GetSongInfoById(input)
+	if inputId, err = strconv.Atoi(input); err == nil {
+		song, err = netease.GetSongInfoById(inputId)
 	} else {
 		song, err = netease.GetSongInfoByName(input)
 	}
@@ -64,9 +67,31 @@ func (w Worker) music(input string) (err error) {
 	}
 
 	// 生成歌曲 mxc
-	err = netease.GenSongMxc(w.client, &song)
+	err = netease.GenSongMxc(w.Client, &song)
+	if err != nil {
+		return
+	}
 
-	// 准备歌曲信息
-	text := song.Name + " - " + strings.Join(song.Artist, " ")
-	fileName := text + ".mp3"
-	*/
+	// 发送歌曲
+	err = matrix.SendMusic(w.Client, song, roomId)
+	return
+}
+
+func (w Worker) search(roomId id.RoomID) (err error) {
+	text := "Search function is not implemented yet"
+	_, err = w.Client.SendText(context.Background(), roomId, text)
+	return
+}
+
+func (worker *Worker) SetSyncer() {
+	syncer := mautrix.NewDefaultSyncer()
+	syncer.OnEventType(event.EventMessage, func(ctx context.Context, ev *event.Event) {
+		go func() {
+			err := worker.ProcessMessage(ctx, ev)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to process message")
+			}
+		}()
+	})
+	worker.Client.Syncer = syncer
+}

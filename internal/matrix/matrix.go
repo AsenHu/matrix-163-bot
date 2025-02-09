@@ -3,11 +3,11 @@ package matrix
 import (
 	"context"
 	"matrix-163-bot/internal/config"
+	"strings"
 	"time"
 
-	"matrix-163-bot/internal/worker"
+	"matrix-163-bot/internal/netease"
 
-	"github.com/rs/zerolog/log"
 	"maunium.net/go/mautrix"
 	"maunium.net/go/mautrix/event"
 	"maunium.net/go/mautrix/id"
@@ -59,25 +59,25 @@ func Login(cfg *config.Account) (client *mautrix.Client, err error) {
 	return
 }
 
-func SetSyncer(client *mautrix.Client, worker *worker.Worker) {
-	syncer := mautrix.NewDefaultSyncer()
-	syncer.OnEventType(event.EventMessage, func(ctx context.Context, ev *event.Event) {
-		go func() {
-			err := worker.ProcessMessage(ctx, ev)
-			if err != nil {
-				log.Error().Err(err).Msg("Failed to process message")
-			}
-		}()
-	})
-	client.Syncer = syncer
-}
-
-/*
-func SendMusicWithText(client *mautrix.Client, song Song) (err error) {
+func SendMusic(client *mautrix.Client, song netease.Song, roomId id.RoomID) (err error) {
 	// 准备 Content
 	content := sendMusiContent{
-		Body:     song.Name - strings.Join(song.Artist, ", "),
+		Body:     song.Name + " - " + strings.Join(song.Artist, ", "),
 		Filename: song.Name + ".mp3",
-		
+		Info: struct {
+			Duration int    `json:"duration"`
+			MimeType string `json:"mimetype"`
+			Size     int    `json:"size"`
+		}{
+			Duration: song.Info.Duration,
+			MimeType: song.Info.MimeType,
+			Size:     song.Info.Size,
+		},
+		MsgType: "m.audio",
+		URL:     song.MusicMxc.String(),
+	}
+
+	// 发送消息
+	_, err = client.SendMessageEvent(context.Background(), roomId, event.EventMessage, content)
+	return
 }
-		*/
