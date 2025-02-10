@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"matrix-163-bot/internal/config"
 	"matrix-163-bot/internal/worker"
 
@@ -10,9 +11,14 @@ import (
 	"maunium.net/go/mautrix/id"
 )
 
-const CONFIG_PATH = "config.json"
+var CONFIG_PATH string
+
+func init() {
+	flag.StringVar(&CONFIG_PATH, "c", "config.json", "Path to the configuration file")
+}
 
 func main() {
+	flag.Parse()
 	// 加载配置
 	cfg := config.NewConfig(CONFIG_PATH)
 	err := cfg.Load()
@@ -38,7 +44,7 @@ func main() {
 
 	for {
 		// 设置回调函数
-		worker.SetCallBack(client)
+		worker.SetCallBack(client, &cfg)
 
 		// 启动同步
 		log.Info().Msg("Start sync...")
@@ -46,6 +52,7 @@ func main() {
 			// 处理错误
 			if errors.Is(err, mautrix.MUnknownToken) {
 				log.Warn().Msg("Token expired, relogin...")
+				client.AccessToken = ""
 				if err := login(client, &cfg.Content.Matrix); err != nil {
 					log.Fatal().Err(err).Msg("Failed to relogin")
 				}

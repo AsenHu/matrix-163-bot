@@ -1,0 +1,25 @@
+{
+  "matrix": {
+    "baseURL": "https://example.com",
+    "username": "@bot:example.com",
+    "password": "password",
+    "deviceID": "",
+    "token": "",
+    "asyncUpload": true
+  },
+  "netease": {
+    "MUSIC_U": "",
+    "quailty": "higher",
+    "checkMd5": true
+  },
+  "speed": {
+    "download": {
+      "rate": 1,
+      "burst": 1
+    },
+    "search": {
+      "rate": 1,
+      "burst": 1
+    }
+  }
+}

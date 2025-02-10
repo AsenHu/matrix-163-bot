@@ -11,16 +11,18 @@ type Config struct {
 }
 
 type Content struct {
-	Matrix  Matrix  `json:"matrix"`
-	Netease Netease `json:"netease"`
+	Matrix  Matrix     `json:"matrix"`
+	Netease Netease    `json:"netease"`
+	Speed   SpeedLimit `json:"speed"`
 }
 
 type Matrix struct {
-	BaseURL  string `json:"baseURL"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	DeviceID string `json:"deviceID"`
-	Token    string `json:"token"`
+	BaseURL     string `json:"baseURL"`
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+	DeviceID    string `json:"deviceID"`
+	Token       string `json:"token"`
+	AsyncUpload bool   `json:"asyncUpload"`
 }
 
 type Netease struct {
@@ -29,24 +31,55 @@ type Netease struct {
 	CheckMd5 bool   `json:"checkMd5"`
 }
 
+type SpeedLimit struct {
+	Download Limiter `json:"download"`
+	Search   Limiter `json:"search"`
+}
+
+type Limiter struct {
+	Rate  int `json:"rate"`
+	Burst int `json:"burst"`
+}
+
 func NewConfig(path string) Config {
 	return Config{
 		Path: path,
 		Content: Content{
 			Matrix: Matrix{
-				BaseURL:  "https://example.com",
-				Username: "@bot:example.com",
-				Password: "password",
+				BaseURL:     "https://example.com",
+				Username:    "@bot:example.com",
+				Password:    "password",
+				AsyncUpload: true,
 			},
 			Netease: Netease{
 				Quailty:  "higher",
 				CheckMd5: true,
+			},
+			Speed: SpeedLimit{
+				Download: Limiter{
+					Rate:  1,
+					Burst: 1,
+				},
+				Search: Limiter{
+					Rate:  1,
+					Burst: 1,
+				},
 			},
 		},
 	}
 }
 
 func (c *Config) Load() (err error) {
+	// 检查文件是否存在
+	_, err = os.Stat(c.Path)
+	if os.IsNotExist(err) {
+		// 文件不存在则创建
+		err = c.Save()
+		if err != nil {
+			return
+		}
+	}
+
 	// 读取文件
 	buffer, err := os.ReadFile(c.Path)
 	if err != nil {
