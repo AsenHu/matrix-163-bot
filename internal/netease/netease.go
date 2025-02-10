@@ -13,15 +13,26 @@ import (
 )
 
 type Song struct {
-	ID     int
-	Name   string
-	Artist []string
-	Info   struct {
-		Duration int
-		MimeType string
-		Size     int
-	}
-	MusicMxc id.ContentURI
+	ID          int
+	Name        string
+	Artist      []string
+	SendContent sendMusiContent
+	MusicByte   []byte
+	MusicMxc    id.ContentURI
+}
+
+type sendMusiContent struct {
+	Body     string   `json:"body"`
+	Filename string   `json:"filename"`
+	Info     SongInfo `json:"info"`
+	MsgType  string   `json:"msgtype"`
+	URL      string   `json:"url"`
+}
+
+type SongInfo struct {
+	Duration int    `json:"duration"`
+	MimeType string `json:"mimetype"`
+	Size     int    `json:"size"`
 }
 
 func GetSongInfoByName(name string) (song Song, err error) {

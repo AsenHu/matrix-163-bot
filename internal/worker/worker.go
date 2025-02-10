@@ -17,18 +17,6 @@ type Worker struct {
 	Client *mautrix.Client
 }
 
-type sendMusiContent struct {
-	Body     string `json:"body"`
-	Filename string `json:"filename"`
-	Info     struct {
-		Duration int    `json:"duration"`
-		MimeType string `json:"mimetype"`
-		Size     int    `json:"size"`
-	} `json:"info"`
-	MsgType string `json:"msgtype"`
-	URL     string `json:"url"`
-}
-
 func SetCallBack(client *mautrix.Client) {
 	worker := Worker{
 		Client: client,
