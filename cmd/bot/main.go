@@ -1,11 +1,13 @@
 package main
 
 import (
+	"errors"
 	"matrix-163-bot/internal/config"
-	"matrix-163-bot/internal/matrix"
 	"matrix-163-bot/internal/worker"
 
 	"github.com/rs/zerolog/log"
+	"maunium.net/go/mautrix"
+	"maunium.net/go/mautrix/id"
 )
 
 const CONFIG_PATH = "config.json"
@@ -18,33 +20,47 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to load config")
 	}
 
-	// 打印账户信息
-	log.Info().Msg("Account info by config")
-	cfg.Print()
+	// 准备 client
+	client, err := mautrix.NewClient(cfg.Content.Matrix.BaseURL, id.UserID(cfg.Content.Matrix.Username), cfg.Content.Matrix.Token)
+	if err != nil {
+		return
+	}
 
-	// 开始登陆
+	// 登陆
 	log.Info().Msg("Try to login...")
-	client, err := matrix.Login(&cfg.Content)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to login")
-	}
-	log.Info().Msg("Login success")
-	cfg.Print()
-
-	// 保存配置
-	err = cfg.Save()
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to save config")
+	if cfg.Content.Matrix.Token == "" {
+		if err := login(client, &cfg.Content.Matrix); err != nil {
+			log.Fatal().Err(err).Msg("Failed to login")
+		}
+		log.Info().Msg("Login success")
+		cfg.Save()
 	}
 
-	// 设置回调函数
-	var worker worker.Worker
-	worker.Client = client
-	worker.SetSyncer()
+	for {
+		// 设置回调函数
+		worker.SetCallBack(client)
 
-	// 启动同步
-	log.Info().Msg("Start sync...")
-	if err := client.Sync(); err != nil {
-		log.Fatal().Err(err).Msg("Failed to sync")
+		// 启动同步
+		log.Info().Msg("Start sync...")
+		if err := client.Sync(); err != nil {
+			// 处理错误
+			if errors.Is(err, mautrix.MUnknownToken) {
+				log.Warn().Msg("Token expired, relogin...")
+				if err := login(client, &cfg.Content.Matrix); err != nil {
+					log.Fatal().Err(err).Msg("Failed to relogin")
+				}
+				cfg.Save()
+				continue
+			}
+			if errors.Is(err, mautrix.MInvalidParam) {
+				log.Warn().Msg("Username format error, relogin...")
+				if err := login(client, &cfg.Content.Matrix); err != nil {
+					log.Fatal().Err(err).Msg("Failed to relogin")
+				}
+				cfg.Save()
+				continue
+			}
+			log.Fatal().Err(err).Msg("Sync failed")
+		}
 	}
 }

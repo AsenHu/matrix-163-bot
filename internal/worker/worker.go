@@ -2,10 +2,10 @@ package worker
 
 import (
 	"context"
-	"matrix-163-bot/internal/matrix"
-	"matrix-163-bot/internal/netease"
 	"strconv"
 	"strings"
+
+	"matrix-163-bot/internal/netease"
 
 	"github.com/rs/zerolog/log"
 	"maunium.net/go/mautrix"
@@ -15,6 +15,34 @@ import (
 
 type Worker struct {
 	Client *mautrix.Client
+}
+
+type sendMusiContent struct {
+	Body     string `json:"body"`
+	Filename string `json:"filename"`
+	Info     struct {
+		Duration int    `json:"duration"`
+		MimeType string `json:"mimetype"`
+		Size     int    `json:"size"`
+	} `json:"info"`
+	MsgType string `json:"msgtype"`
+	URL     string `json:"url"`
+}
+
+func SetCallBack(client *mautrix.Client) {
+	worker := Worker{
+		Client: client,
+	}
+	syncer := mautrix.NewDefaultSyncer()
+	syncer.OnEventType(event.EventMessage, func(ctx context.Context, ev *event.Event) {
+		go func() {
+			err := worker.ProcessMessage(ctx, ev)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to process message")
+			}
+		}()
+	})
+	worker.Client.Syncer = syncer
 }
 
 func (w *Worker) ProcessMessage(ctx context.Context, evt *event.Event) (err error) {
@@ -34,6 +62,29 @@ func (w *Worker) ProcessMessage(ctx context.Context, evt *event.Event) (err erro
 	case "!search":
 		err = w.search(evt.RoomID)
 	}
+	return
+}
+
+func sendMusic(client *mautrix.Client, song netease.Song, roomId id.RoomID) (err error) {
+	// 准备 Content
+	content := sendMusiContent{
+		Body:     song.Name + " - " + strings.Join(song.Artist, ", "),
+		Filename: song.Name + ".mp3",
+		Info: struct {
+			Duration int    `json:"duration"`
+			MimeType string `json:"mimetype"`
+			Size     int    `json:"size"`
+		}{
+			Duration: song.Info.Duration,
+			MimeType: song.Info.MimeType,
+			Size:     song.Info.Size,
+		},
+		MsgType: "m.audio",
+		URL:     song.MusicMxc.String(),
+	}
+
+	// 发送消息
+	_, err = client.SendMessageEvent(context.Background(), roomId, event.EventMessage, content)
 	return
 }
 
@@ -73,7 +124,7 @@ func (w Worker) music(input string, roomId id.RoomID) (err error) {
 	}
 
 	// 发送歌曲
-	err = matrix.SendMusic(w.Client, song, roomId)
+	err = sendMusic(w.Client, song, roomId)
 	return
 }
 
@@ -81,17 +132,4 @@ func (w Worker) search(roomId id.RoomID) (err error) {
 	text := "Search function is not implemented yet"
 	_, err = w.Client.SendText(context.Background(), roomId, text)
 	return
-}
-
-func (worker *Worker) SetSyncer() {
-	syncer := mautrix.NewDefaultSyncer()
-	syncer.OnEventType(event.EventMessage, func(ctx context.Context, ev *event.Event) {
-		go func() {
-			err := worker.ProcessMessage(ctx, ev)
-			if err != nil {
-				log.Error().Err(err).Msg("Failed to process message")
-			}
-		}()
-	})
-	worker.Client.Syncer = syncer
 }
