@@ -22,22 +22,6 @@ type SendMessageEventReturn struct {
 	Err  error
 }
 
-type sendMusiContent struct {
-	Body       string   `json:"body"`
-	Format     string   `json:"format"`
-	FormatBody string   `json:"formatted_body"`
-	Filename   string   `json:"filename"`
-	Info       songInfo `json:"info"`
-	MsgType    string   `json:"msgtype"`
-	URL        string   `json:"url"`
-}
-
-type songInfo struct {
-	Duration int    `json:"duration"`
-	MimeType string `json:"mimetype"`
-	Size     int    `json:"size"`
-}
-
 func (w *Worker) StartSendMessageEvent() (ch chan SendMessageEventReturn) {
 	ch = make(chan SendMessageEventReturn, 1)
 
@@ -172,16 +156,26 @@ func (w *Worker) StartSendMessageEvent() (ch chan SendMessageEventReturn) {
 			fmtBody += fmt.Sprintf("<br>🔊 <strong>Bitrate:</strong> <em>%d kbps</em>", (getURLResp.Resp.Data[0].Br+500)/1000)
 		}
 
-		content := sendMusiContent{
-			Body:       text,
-			Format:     "org.matrix.custom.html",
-			FormatBody: fmtBody,
-			Filename:   fmt.Sprintf("%s - %s.%s", songName, strings.Join(artists, ", "), getURLResp.Resp.Data[0].Type),
-			Info: songInfo{
+		content := event.MessageEventContent{
+			Body: text,
+			Mentions: &event.Mentions{
+				UserIDs: []id.UserID{
+					w.WellKnownInfo.Event.Sender,
+				},
+			},
+			RelatesTo: &event.RelatesTo{
+				InReplyTo: &event.InReplyTo{
+					EventID: w.WellKnownInfo.Event.ID,
+				},
+			},
+			Format:        "org.matrix.custom.html",
+			FormattedBody: fmtBody,
+			FileName:      fmt.Sprintf("%s - %s.%s", songName, strings.Join(artists, ", "), getURLResp.Resp.Data[0].Type),
+			Info: &event.FileInfo{
 				Duration: duration,
 			},
 			MsgType: "m.audio",
-			URL:     songMXC.String(),
+			URL:     id.ContentURIString(songMXC.String()),
 		}
 		// 确认 Mime Type
 		if getURLResp.Resp.Data[0].Type == "mp3" {

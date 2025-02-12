@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"encoding/json"
 	"matrix-163-bot/internal/config"
 	"matrix-163-bot/internal/limiter"
 	"strconv"
@@ -50,6 +49,24 @@ func Init(client *mautrix.Client, cfg *config.Config, limiter *Limiter) {
 	syncer.OnEventType(event.EventMessage, func(ctx context.Context, ev *event.Event) {
 		go func() {
 			NewWorker(client, cfg, limiter).ProcessMessage(ctx, ev)
+		}()
+	})
+	syncer.OnEventType(event.StateMember, func(ctx context.Context, evt *event.Event) {
+		go func() {
+			if evt.GetStateKey() == client.UserID.String() && evt.Content.AsMember().Membership == event.MembershipInvite {
+				_, err := client.JoinRoomByID(ctx, evt.RoomID)
+				if err == nil {
+					log.Info().
+						Str("room_id", evt.RoomID.String()).
+						Str("inviter", evt.Sender.String()).
+						Msg("Joined room after invite")
+				} else {
+					log.Error().Err(err).
+						Str("room_id", evt.RoomID.String()).
+						Str("inviter", evt.Sender.String()).
+						Msg("Failed to join room after invite")
+				}
+			}
 		}()
 	})
 	client.Syncer = syncer
@@ -122,10 +139,7 @@ func (w *Worker) music(evt *event.Event, input string) (err error) {
 	log.Info().Msg("Input: " + input)
 
 	// 启动！
-	resp := <-w.StartSendMessageEvent()
-	json, _ := json.Marshal(resp)
-	log.Info().Msg(string(json))
-
+	w.StartSendMessageEvent()
 	return
 }
 
