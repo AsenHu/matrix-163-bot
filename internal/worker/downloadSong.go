@@ -29,7 +29,7 @@ func (w *Worker) StartDownloadSong() (ch chan DownloadSongReturn) {
 		if w.DownloadSong.Status.IsDone {
 			w.DownloadSong.Status.Mutex.Unlock()
 			ch <- DownloadSongReturn{
-				Err: errors.New("You can't download the song again"),
+				Err: errors.New("you can't download the song again"),
 			}
 			close(ch)
 			return

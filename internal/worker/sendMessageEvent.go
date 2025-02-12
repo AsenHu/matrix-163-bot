@@ -151,7 +151,7 @@ func (w *Worker) StartSendMessageEvent() (ch chan SendMessageEventReturn) {
 		if !w.WellKnownInfo.Config.Ffmpeg.Enable {
 			text += fmt.Sprintf("\n🔊 **Bitrate:** *%d kbps*", (getURLResp.Resp.Data[0].Br+500)/1000)
 		}
-		fmtBody := fmt.Sprintf("🎵 <strong>%s</strong><br>🎤 <em>%s</em> | 💿 <em>%s kbps</em>", songName, strings.Join(artists, ", "), album)
+		fmtBody := fmt.Sprintf("🎵 <strong>%s</strong><br>🎤 <em>%s</em> | 💿 <em>%s</em>", songName, strings.Join(artists, ", "), album)
 		if !w.WellKnownInfo.Config.Ffmpeg.Enable {
 			fmtBody += fmt.Sprintf("<br>🔊 <strong>Bitrate:</strong> <em>%d kbps</em>", (getURLResp.Resp.Data[0].Br+500)/1000)
 		}
