@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"matrix-163-bot/internal/config"
+	"matrix-163-bot/internal/limiter"
 	"matrix-163-bot/internal/worker"
 
 	"github.com/rs/zerolog/log"
@@ -44,7 +45,11 @@ func main() {
 
 	for {
 		// 设置回调函数
-		worker.SetCallBack(client, &cfg)
+		limiter := worker.Limiter{
+			SearchLimiter:   limiter.NewLimiter(cfg.Content.Speed.Search.Rate, cfg.Content.Speed.Search.Burst),
+			DownloadLimiter: limiter.NewLimiter(cfg.Content.Speed.Download.Rate, cfg.Content.Speed.Download.Burst),
+		}
+		worker.Init(client, &cfg, &limiter)
 
 		// 启动同步
 		log.Info().Msg("Start sync...")

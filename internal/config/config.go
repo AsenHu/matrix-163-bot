@@ -13,7 +13,8 @@ type Config struct {
 type Content struct {
 	Matrix  Matrix     `json:"matrix"`
 	Netease Netease    `json:"netease"`
-	Speed   SpeedLimit `json:"speed"`
+	Ffmpeg  Ffmpeg     `json:"ffmpeg"`
+	Speed   SpeedLimit `json:"speedLimit"`
 }
 
 type Matrix struct {
@@ -29,6 +30,11 @@ type Netease struct {
 	MUSIC_U  string `json:"MUSIC_U"`
 	Quailty  string `json:"quailty"`
 	CheckMd5 bool   `json:"checkMd5"`
+}
+
+type Ffmpeg struct {
+	Enable  bool   `json:"enable"`
+	Quailty string `json:"quailty"`
 }
 
 type SpeedLimit struct {
@@ -54,6 +60,9 @@ func NewConfig(path string) Config {
 			Netease: Netease{
 				Quailty:  "higher",
 				CheckMd5: true,
+			},
+			Ffmpeg: Ffmpeg{
+				Enable: false,
 			},
 			Speed: SpeedLimit{
 				Download: Limiter{
